@@ -116,9 +116,9 @@ wdh analyze \
   --output runs/qwen3-4b/sc-greedy-r5/summary-recomputed.json
 ```
 
-## Reproducibility guarantees
+## Reproducibility controls
 
-- Candidate seeds and scales are materialized in `seed_bank.jsonl`.
+- Candidate seeds and scales are generated from the configured global seed and saved to `seed_bank.jsonl` for each run.
 - Profile sharding is deterministic by candidate index.
 - Existing candidate IDs are skipped when profiling resumes.
 - Full-weight perturbations restore from a CPU snapshot, not by subtracting low-precision noise.
