@@ -4,4 +4,4 @@ This repository contains an independent implementation and does not vendor the e
 
 Model weights and datasets are not distributed here. They retain their respective licenses and terms. Users must obtain them from their official sources.
 
-Paper authors and citation metadata are listed in [README.md](README.md). Figure 1 is reproduced from the authors' camera-ready figure.
+Paper authors are listed in [README.md](README.md). Figure 1 is reproduced from the authors' paper figure.
