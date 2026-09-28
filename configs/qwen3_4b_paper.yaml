@@ -13,7 +13,8 @@ data:
 
 seed_bank:
   sigmas: [0.0005, 0.001, 0.002]
-  seeds_per_sigma: 100
+  # Regenerated reference pool matching the camera-ready per-scale counts.
+  counts_per_sigma: [160, 174, 166]
   global_seed: 42
 
 perturbation:
@@ -23,33 +24,35 @@ perturbation:
   verify_restore: true
 
 generation:
+  # AMC12/MATH500 camera-ready budget. Override relevant blocks to 4096 for
+  # GPQA and MMLU-Redux as documented in README.md.
   profile:
-    max_new_tokens: 4096
+    max_new_tokens: 8192
     temperature: 0.0
     top_p: 1.0
     batch_size: 8
     max_input_tokens: 8192
   eval:
-    max_new_tokens: 4096
+    max_new_tokens: 8192
     temperature: 0.0
     top_p: 1.0
     batch_size: 8
     max_input_tokens: 16384
   base:
-    max_new_tokens: 4096
+    max_new_tokens: 8192
     temperature: 0.7
     top_p: 0.95
     batch_size: 8
     max_input_tokens: 16384
   judge:
-    max_new_tokens: 4096
+    max_new_tokens: 8192
     temperature: 0.0
     top_p: 1.0
     batch_size: 8
     max_input_tokens: 16384
 
 debate:
-  rounds: 5
+  rounds: 3
   peer_max_chars: 800
   prompt: verify
   global_seed: 42

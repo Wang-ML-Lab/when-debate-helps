@@ -1,48 +1,47 @@
 # Release-Readiness Audit
 
-Reviewed September 27, 2026 against public commit `8b80ac682f5c4348fa1c5dc7355051d57d1b95bc` and the authors' local NeurIPS 2026 camera-ready `main.tex`.
+Reviewed and updated September 27, 2026 against the authors' NeurIPS 2026 camera-ready `main.tex`.
 
-**Assessment: usable as a reference implementation, but not ready to claim full reproduction of the paper.** Two correctness issues need attention, and the benchmark-to-result reproduction path is incomplete. This documentation update records those issues; it does not change experiment code.
+**Assessment: ready as an independent reference implementation of the core profiling, selection, and R3 debate workflow.** This repository does not claim to be a complete archival artifact for every paper analysis.
 
 ## Verified Foundations
 
 - Apache-2.0 license, contribution instructions, third-party notice, and exclusions for generated data and runs are present.
-- Public CI passed on the reviewed commit: [tests run](https://github.com/neo1zh/when-debate-helps/actions/runs/36267874873).
-- A fresh editable installation succeeded on macOS ARM64 with Python 3.12.14, PyTorch 2.14.0, and Transformers 5.17.0. Ruff passed and all 14 existing tests passed.
-- Source distribution and wheel builds succeeded. The build emitted a deprecation warning for the TOML-table license declaration.
-- The repository records a prior Qwen2.5-0.5B model smoke run in [RESEARCH_LOG.md](../RESEARCH_LOG.md). This audit did not rerun model generation or paper-scale GPU experiments.
-- The README now contains the requested title, owner-confirmed NeurIPS 2026 acceptance, all six authors and affiliations from TeX, Figure 1, and a citation. [CITATION.cff](../CITATION.cff) supplies machine-readable citation metadata.
+- A fresh editable installation, Ruff, the unit and regression tests, and package builds pass on the audited revision.
+- The README contains the NeurIPS 2026 title and acceptance status, all six authors and affiliations from the camera-ready TeX, Figure 1 with provenance, and machine-readable citation metadata.
+- The reference Qwen configuration creates 500 candidates across noise scales `0.0005`, `0.001`, and `0.002`, with camera-ready counts 160, 174, and 166.
+- The documented workflow uses SC@20 and three debate rounds. Output budgets match the camera-ready setup: 8192 tokens for AMC12/MATH500 and 4096 for GPQA/MMLU-Redux.
 
-## Correctness Blockers
+## Resolved Findings
 
-### 1. SC-Greedy Uses Labels to Break Ties
+### Label-Free SC-Greedy Tie-Breaking
 
-**Evidence:** [`selection.py`](https://github.com/neo1zh/when-debate-helps/blob/8b80ac682f5c4348fa1c5dc7355051d57d1b95bc/src/when_debate_helps/selection.py) uses the shared `_greedy_coverage` function for AC-Greedy and SC-Greedy. Candidates are ranked by coverage objective, then `profile.score`, which profiling computes from labeled correctness. Thus the SC-Greedy objective is label-free, but the implemented selector is not.
+SC-Greedy previously shared AC-Greedy's labeled-accuracy tie-break. It now collects candidates tied on the coverage objective and chooses among them with a seeded pseudorandom generator. `--tie-break-seed` defaults to 42 and is recorded in the selected-team JSON. A regression test holds predictions fixed, reverses accuracy and correctness labels, and verifies that the selected candidate does not change.
 
-A minimal executed probe kept candidate predictions fixed at A and B, each with support 0.5. Changing only the gold answer and its derived accuracy scores changed the selected candidate from `c1` to `c2` at the same coverage objective of 0.5.
+This makes the selection path label-free while keeping runs reproducible. AC-Greedy continues to use labeled construction accuracy because AC-Greedy is the label-based method.
 
-**Required before claiming label-free selection:** use a label-independent tie rule for SC-Greedy and add a regression test that changing gold labels and accuracy scores cannot change the selected society. Review any results produced with this implementation after the correction.
+### Profiling Worker Failure and Merge Completeness
 
-### 2. Failed Profile Workers Do Not Stop the Shard Launcher
+The multi-GPU launcher now records every background process, checks every exit status, and exits before merging if any shard fails. The merge command receives the seed bank and requires the merged candidate-ID set to match it exactly. Regression tests cover both a failed worker and an incomplete merge.
 
-**Evidence:** [`launch_profile_shards.sh`](https://github.com/neo1zh/when-debate-helps/blob/8b80ac682f5c4348fa1c5dc7355051d57d1b95bc/scripts/launch_profile_shards.sh) launches background workers and uses bare `wait`, which does not propagate an individual worker's failure. Merging checks duplicate conflicts but does not check completeness against the seed bank.
+## Public Release Scope
 
-An executed shell probe made one worker exit 17 and the other succeed. The launcher still called the merge command and exited 0 when that command succeeded. In a real run, a missing file can make merging fail, but an existing partial or stale shard can allow an incomplete pool to pass through.
+The public repository covers the core experiment path:
 
-**Required:** retain each worker PID, check every exit status, stop before merging after any failure, and verify the merged candidate IDs against the expected seed bank. Test a failure after a partial output has been written.
+1. deterministic perturbation-bank construction;
+2. candidate profiling and validated multi-GPU sharding;
+3. Top-Accuracy, AC-Greedy, and label-free SC-Greedy society selection;
+4. SC@20, majority vote, and R3 verification-aware debate;
+5. complete response traces and recovery/damage metrics.
 
-## Missing Paper-Reproduction Materials
+Figure-generation scripts, controlled fixed-proposal Probe runners, internal table assembly, and private experiment-management utilities are outside this code release. They are not required to run the public core pipeline. Model weights, licensed benchmark data, and raw paper runs are also not redistributed.
 
-| Priority | Gap and Evidence | Completion Criterion |
-| --- | --- | --- |
-| High | **Exact pools and configurations.** `configs/qwen3_4b_paper.yaml` creates 300 candidates (100 per scale); the camera-ready seed-profiling appendix reports 500 Qwen candidates with scale counts 160/174/166. There is no OLMo configuration. | Publish the original seed banks, selected teams, model/tokenizer revisions, and configurations for both backbones and each benchmark. Explicitly separate regenerated reference pools from original paper pools. |
-| High | **Dataset preparation and splits.** `docs/DATA.md` specifies a generic JSONL schema, and the public configuration points at placeholder paths. There are no benchmark conversion/download scripts or split manifests. | Document official sources, access requirements, versions, split IDs or reproducible split logic, and checksums for AMC12 (360/739 construction/test), MATH500 (200/300), GPQA (200/346), and MMLU-Redux (40/60 per subject across five subjects). Add OlympiadBench (200/474) for appendix reproduction and verify construction/test disjointness. Redistributing restricted data is unnecessary. |
-| High | **Budgets, prompts, and reported metrics.** The example workflow uses SC-30 and final R5 readout. The camera-ready main table uses SC@20 and R3 majority vote from five-round traces. The public config gives every task 4096 output tokens; the paper uses 8192 for AMC12/MATH500 and 4096 for GPQA/MMLU-Redux. Prompt text also differs from the camera-ready templates. | Release dataset-specific prompts and budgets, commands selecting the correct round/readout, and aggregation scripts for all eight main-table columns, including the five MMLU subjects. Existing traces contain round-level votes, but final accuracy is a different statistic. |
-| High | **Results and mechanism experiments.** No public run artifacts, table/figure regeneration scripts, controlled fixed-proposal LVD probe runner, or complete five-seed robustness recipe are present. | Publish allowed traces or sufficient per-example summaries, manifests, expected aggregate values/tolerances, and scripts reproducing the main table, dynamics figures, controlled probes, and stochastic intervals. Map each paper result to its inputs and command. |
-| Medium | **Run provenance and safe resume.** `runtime.py` records Python/PyTorch/CUDA but omits Transformers/tokenizer versions, model revision, and input hashes. Profiling resumes by candidate ID alone; generated candidate IDs can recur across different pools/configurations. | Record the full tested environment and input identities. Refuse resume when model, dataset, generation settings, or seed/sigma mapping differs. Bind profiles and selected teams to their construction data and seed bank. |
-| Medium | **Integration tests and environment coverage.** Existing tests cover helpers, profiling, and perturbation restoration; they do not exercise a complete debate/judge/CLI run. CI tests Python 3.11 despite a Python >=3.10 claim, and dependencies have open lower bounds. | Add a small deterministic integration fixture covering tied and untied votes, debate rounds, trace serialization, and offline recomputation. Record a tested dependency lock or constraints file, test the advertised minimum Python version, and document measured GPU/host-RAM requirements and runtime. |
-| Medium | **Versioned distribution and paper links.** GitHub has no tags or releases as of the audit. There is no public paper/proceedings link. Package builds omit configs, scripts, examples, and figure assets from the source archive, so README workflows do not work from that archive alone. | Publish a tagged release with release notes after blockers are resolved; supply a self-contained reproduction bundle or clearly require a Git checkout. Add canonical paper identifiers when public. Modernize the deprecated package license metadata before publishing packages. |
+Users preparing paper-comparable runs must supply the benchmark splits described in the camera-ready paper, use the matching dataset prompt and output budget, and retain the resolved configuration and generated seed bank with each run.
 
-## Validation Scope
+## Token-Budget Note
 
-The installation, lint, 14 unit tests, package builds, SC-Greedy tie probe, and failed-worker probe were run during this audit. The Figure 1 PNG was rendered from the exact PDF referenced by the first figure in `main.tex` and visually checked. No benchmark accuracy, GPU resource estimate, or paper-result equivalence is asserted by these software checks.
+The token budget matters whenever generation reaches the limit. Reducing AMC12 or MATH500 from 8192 to 4096 can truncate long solutions and change extracted answers, coverage profiles, selected societies, and downstream debate accuracy. For responses that finish before 4096 tokens, the larger cap alone does not alter deterministic decoding. GPQA and MMLU-Redux remain at the paper's 4096-token budget.
+
+## Validation Boundary
+
+Software tests verify selection independence from labels, deterministic seed-bank size and scale counts, worker-failure propagation, merge completeness, trace metrics, and package integrity. Full Qwen3-4B and OLMo-3-7B paper runs require the corresponding model weights, benchmark access, and GPU resources and were not rerun as part of this software audit.

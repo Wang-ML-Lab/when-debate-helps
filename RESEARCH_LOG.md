@@ -2,6 +2,13 @@
 
 This file records completed public-repository validation runs. Paper results will be linked after the arXiv release and artifact export.
 
+## 2026-09-27: release-readiness fixes
+
+- Made SC-Greedy tie-breaking reproducibly random and independent of labels and construction accuracy.
+- Made the profiling launcher fail if any worker fails and validate merged profiles against the seed bank.
+- Updated the reference Qwen pool to 500 candidates with scale counts 160/174/166.
+- Aligned the documented main workflow to R3 and SC@20, with 8192-token math and 4096-token GPQA/MMLU-Redux budgets.
+
 ## 2026-09-26: independent release implementation
 
 - Implemented the `profile -> select -> evaluate -> analyze` pipeline.

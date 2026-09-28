@@ -1,9 +1,11 @@
 from contextlib import nullcontext
 
+import pytest
+
 from when_debate_helps.data import Example
 from when_debate_helps.io import iter_jsonl, write_jsonl
 from when_debate_helps.model import GenerationConfig
-from when_debate_helps.profile import profile_candidates
+from when_debate_helps.profile import merge_profile_shards, profile_candidates
 
 
 class FakeGenerator:
@@ -42,3 +44,14 @@ def test_no_resume_overwrites_existing_profile(tmp_path) -> None:
 
     rows = list(iter_jsonl(output))
     assert [row["candidate_id"] for row in rows] == ["candidate-000000"]
+
+
+def test_merge_rejects_incomplete_seed_bank(tmp_path) -> None:
+    candidates = tmp_path / "candidates.jsonl"
+    shard = tmp_path / "profile-0.jsonl"
+    output = tmp_path / "profiles.jsonl"
+    write_jsonl(candidates, [{"candidate_id": "c1"}, {"candidate_id": "c2"}])
+    write_jsonl(shard, [{"candidate_id": "c1"}])
+
+    with pytest.raises(ValueError, match="missing 1 candidates"):
+        merge_profile_shards([shard], output, candidates)

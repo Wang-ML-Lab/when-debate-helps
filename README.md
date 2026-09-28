@@ -24,9 +24,9 @@ The code implements the core experiment pipeline:
 
 ## Release Status
 
-This is an independent reference implementation. Full reproduction of the camera-ready results remains pending. The current Qwen configuration uses a new 300-candidate pool; the paper used a 500-candidate pool. The example workflow reports final five-round readouts, while the main table uses R3 majority vote and SC@20. Benchmark preparation, exact experiment configurations, and result artifacts still need to be released.
+This is an independent reference implementation of the paper's core profiling, selection, and debate pipeline. The Qwen paper configuration generates a 500-candidate pool with the camera-ready scale counts (160/174/166), evaluates the R3 readout, and uses SC@20 for the self-consistency baseline.
 
-The release audit also identified a correctness issue: SC-Greedy currently breaks coverage ties using labeled construction accuracy. Its current implementation therefore does not satisfy the paper's label-free selection setting. See [the release-readiness audit](docs/RELEASE_READINESS.md) for evidence and the remaining work.
+SC-Greedy resolves equal coverage objectives with a reproducible random choice controlled by `--tie-break-seed`; labels and construction accuracy do not participate in its tie-breaking. The shard launcher stops before merging if any profiling worker fails and validates the merged candidate IDs against the seed bank. See [the release-readiness audit](docs/RELEASE_READINESS.md) for validation details and release scope.
 
 Paper and proceedings links will be added when public. Author names and affiliations above come from the camera-ready TeX.
 
@@ -94,54 +94,80 @@ for method in top_accuracy ac_greedy sc_greedy; do
     --profiles runs/qwen3-4b/profile/profiles.jsonl \
     --output "runs/qwen3-4b/team-${method}.json" \
     --method "${method}" \
-    --team-size 4
+    --team-size 4 \
+    --tie-break-seed 42
 done
 ```
 
-Run five-round debate with all traces and the vote-then-judge tiebreak readout:
+Run three-round debate with all traces and the vote-then-judge tiebreak readout:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 wdh evaluate \
   --config configs/qwen3_4b_paper.yaml \
   --set model.device=cuda:0 \
   --team runs/qwen3-4b/team-sc_greedy.json \
-  --output-dir runs/qwen3-4b/sc-greedy-r5
+  --output-dir runs/qwen3-4b/sc-greedy-r3
 ```
 
-The same trace format supports the base-model baselines. For example, run SC-30 with no judge, or four-agent Vanilla Debate:
+The same trace format supports the base-model baselines. For example, run SC@20 with no judge, or four-agent Vanilla Debate at R3:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 wdh evaluate-base \
   --config configs/qwen3_4b_paper.yaml \
   --set debate.rounds=0 \
-  --agents 30 \
+  --agents 20 \
   --no-judge-ties \
-  --output-dir runs/qwen3-4b/sc30
+  --output-dir runs/qwen3-4b/sc20
 
 CUDA_VISIBLE_DEVICES=0 wdh evaluate-base \
   --config configs/qwen3_4b_paper.yaml \
   --agents 4 \
-  --output-dir runs/qwen3-4b/vanilla-debate-r5
+  --output-dir runs/qwen3-4b/vanilla-debate-r3
 ```
 
 Base-model agents use the stochastic `generation.base` block, while thicket agents and the tie-break judge use their separate deterministic generation blocks.
+
+The camera-ready output budget is 8192 tokens for AMC12 and MATH500, which is the default in `configs/qwen3_4b_paper.yaml`. GPQA and MMLU-Redux use 4096 tokens. For those datasets, override the relevant generation blocks, for example:
+
+```bash
+wdh profile \
+  --config configs/qwen3_4b_paper.yaml \
+  --set generation.profile.max_new_tokens=4096 \
+  ...
+
+wdh evaluate \
+  --config configs/qwen3_4b_paper.yaml \
+  --set generation.eval.max_new_tokens=4096 \
+  --set generation.judge.max_new_tokens=4096 \
+  ...
+
+wdh evaluate-base \
+  --config configs/qwen3_4b_paper.yaml \
+  --set generation.base.max_new_tokens=4096 \
+  --set generation.judge.max_new_tokens=4096 \
+  ...
+```
+
+The output budget can affect results when a response reaches the generation limit, especially on long mathematical solutions. Matching it is therefore required for a paper-comparable run even though shorter responses are unchanged.
 
 `summary.json` contains aggregate and round-level metrics. `traces.jsonl` retains initial responses, every debate response, extracted answers, correctness, votes, and tie-break judge outputs. Metrics can be recomputed without generation:
 
 ```bash
 wdh analyze \
-  --traces runs/qwen3-4b/sc-greedy-r5/traces.jsonl \
-  --output runs/qwen3-4b/sc-greedy-r5/summary-recomputed.json
+  --traces runs/qwen3-4b/sc-greedy-r3/traces.jsonl \
+  --output runs/qwen3-4b/sc-greedy-r3/summary-recomputed.json
 ```
 
 ## Reproducibility controls
 
 - Candidate seeds and scales are generated from the configured global seed and saved to `seed_bank.jsonl` for each run.
 - Profile sharding is deterministic by candidate index.
+- Every profiling worker must succeed, and the merged profile IDs must exactly match the seed bank.
 - Existing candidate IDs are skipped when profiling resumes.
 - Full-weight perturbations restore from a CPU snapshot, not by subtracting low-precision noise.
 - Exact tensor restoration is checked after every candidate by default.
 - Invalid answer extractions contribute zero SC-Greedy coverage.
+- SC-Greedy uses seeded random tie-breaking that is independent of labels and accuracy.
 - Run manifests record the resolved config, Python and PyTorch versions, CUDA version, device, commit, and parameter counts.
 
 See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for method details and memory tradeoffs.

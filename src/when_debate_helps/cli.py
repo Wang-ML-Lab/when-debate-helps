@@ -41,12 +41,14 @@ def build_parser() -> argparse.ArgumentParser:
     merge = subparsers.add_parser("merge-profiles", help="Merge profile JSONL shards")
     merge.add_argument("--inputs", nargs="+", required=True)
     merge.add_argument("--output", required=True)
+    merge.add_argument("--candidates", help="Validate merged candidate IDs against this seed bank")
 
     select = subparsers.add_parser("select", help="Select a fixed debate team")
     select.add_argument("--profiles", required=True)
     select.add_argument("--output", required=True)
     select.add_argument("--method", choices=["top_accuracy", "ac_greedy", "sc_greedy"], required=True)
     select.add_argument("--team-size", type=int, default=4)
+    select.add_argument("--tie-break-seed", type=int, default=42)
 
     evaluate = subparsers.add_parser("evaluate", help="Run thicket vote/debate with full traces")
     _add_config(evaluate)
@@ -94,10 +96,10 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps({"path": args.path, "examples": len(examples)}, indent=2))
         return
     if args.command == "merge-profiles":
-        merge_profile_shards(args.inputs, args.output)
+        merge_profile_shards(args.inputs, args.output, args.candidates)
         return
     if args.command == "select":
-        select_and_save(args.profiles, args.output, args.method, args.team_size)
+        select_and_save(args.profiles, args.output, args.method, args.team_size, args.tie_break_seed)
         return
     if args.command == "analyze":
         records = list(iter_jsonl(args.traces))
@@ -111,7 +113,14 @@ def main(argv: list[str] | None = None) -> None:
     config = load_config(args.config, args.set)
     if args.command == "seed-bank":
         bank = require(config, "seed_bank")
-        save_seed_bank(args.output, list(bank["sigmas"]), int(bank["seeds_per_sigma"]), int(bank["global_seed"]))
+        counts = bank.get("counts_per_sigma")
+        save_seed_bank(
+            args.output,
+            list(bank["sigmas"]),
+            int(bank["seeds_per_sigma"]) if bank.get("seeds_per_sigma") is not None else None,
+            int(bank["global_seed"]),
+            [int(count) for count in counts] if counts is not None else None,
+        )
         return
     if args.command == "profile":
         generator, perturber = _load_runtime(config)
@@ -153,7 +162,7 @@ def main(argv: list[str] | None = None) -> None:
                 config.get("generation", {}).get("judge", require(config, "generation.eval"))
             ),
             output_dir=args.output_dir,
-            rounds=int(debate.get("rounds", 5)),
+            rounds=int(debate.get("rounds", 3)),
             peer_max_chars=int(debate.get("peer_max_chars", 800)),
             system_prompt=config.get("prompts", {}).get("system"),
             debate_prompt=str(debate.get("prompt", "verify")),
@@ -180,7 +189,7 @@ def main(argv: list[str] | None = None) -> None:
                 config.get("generation", {}).get("judge", require(config, "generation.eval"))
             ),
             output_dir=args.output_dir,
-            rounds=int(debate.get("rounds", 5)),
+            rounds=int(debate.get("rounds", 3)),
             peer_max_chars=int(debate.get("peer_max_chars", 800)),
             system_prompt=config.get("prompts", {}).get("system"),
             debate_prompt=str(debate.get("prompt", "verify")),

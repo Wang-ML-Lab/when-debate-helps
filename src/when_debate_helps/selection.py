@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,7 +45,9 @@ def load_profiles(path: str | Path) -> list[CandidateProfile]:
     return profiles
 
 
-def select_team(profiles: list[CandidateProfile], method: str, team_size: int) -> dict[str, Any]:
+def select_team(
+    profiles: list[CandidateProfile], method: str, team_size: int, tie_break_seed: int = 42
+) -> dict[str, Any]:
     if not 0 < team_size <= len(profiles):
         raise ValueError("team_size must be between 1 and the number of profiles")
     if method == "top_accuracy":
@@ -55,11 +58,17 @@ def select_team(profiles: list[CandidateProfile], method: str, team_size: int) -
         ]
     elif method in {"ac_greedy", "sc_greedy"}:
         proxy = _ac_proxy(profiles) if method == "ac_greedy" else _sc_proxy(profiles)
-        ordered, steps = _greedy_coverage(profiles, proxy, team_size)
+        ordered, steps = _greedy_coverage(
+            profiles,
+            proxy,
+            team_size,
+            use_accuracy_tie_break=method == "ac_greedy",
+            tie_break_seed=tie_break_seed,
+        )
     else:
         raise ValueError(f"Unknown selection method: {method}")
     by_id = {profile.candidate_id: profile for profile in profiles}
-    return {
+    result = {
         "method": method,
         "team_size": team_size,
         "members": [
@@ -75,10 +84,19 @@ def select_team(profiles: list[CandidateProfile], method: str, team_size: int) -
         "pool_size": len(profiles),
         "construction_examples": len(next(iter(by_id.values())).predictions),
     }
+    if method == "sc_greedy":
+        result["tie_break_seed"] = tie_break_seed
+    return result
 
 
-def select_and_save(profile_path: str | Path, output_path: str | Path, method: str, team_size: int) -> None:
-    write_json(output_path, select_team(load_profiles(profile_path), method, team_size))
+def select_and_save(
+    profile_path: str | Path,
+    output_path: str | Path,
+    method: str,
+    team_size: int,
+    tie_break_seed: int = 42,
+) -> None:
+    write_json(output_path, select_team(load_profiles(profile_path), method, team_size, tie_break_seed))
 
 
 def _ac_proxy(profiles: list[CandidateProfile]) -> dict[str, dict[str, float]]:
@@ -112,19 +130,27 @@ def _greedy_coverage(
     profiles: list[CandidateProfile],
     proxy: dict[str, dict[str, float]],
     team_size: int,
+    use_accuracy_tie_break: bool,
+    tie_break_seed: int,
 ) -> tuple[list[CandidateProfile], list[dict[str, Any]]]:
     examples = sorted(next(iter(proxy.values())))
     current = {example_id: 0.0 for example_id in examples}
     remaining = {profile.candidate_id: profile for profile in profiles}
+    rng = random.Random(tie_break_seed)
     selected: list[CandidateProfile] = []
     steps: list[dict[str, Any]] = []
     for _ in range(team_size):
-        scored: list[tuple[float, float, str, CandidateProfile]] = []
+        scored: list[tuple[float, CandidateProfile]] = []
         for candidate_id, profile in remaining.items():
             new_values = [max(current[example_id], proxy[candidate_id][example_id]) for example_id in examples]
             objective = sum(new_values) / len(examples)
-            scored.append((objective, profile.score, candidate_id, profile))
-        objective, _, _, winner = max(scored, key=lambda item: (item[0], item[1], _reverse_id(item[2])))
+            scored.append((objective, profile))
+        objective = max(item[0] for item in scored)
+        tied = [profile for score, profile in scored if score == objective]
+        if use_accuracy_tie_break:
+            winner = max(tied, key=lambda profile: (profile.score, _reverse_id(profile.candidate_id)))
+        else:
+            winner = rng.choice(sorted(tied, key=lambda profile: profile.candidate_id))
         previous = sum(current.values()) / len(examples)
         for example_id in examples:
             current[example_id] = max(current[example_id], proxy[winner.candidate_id][example_id])

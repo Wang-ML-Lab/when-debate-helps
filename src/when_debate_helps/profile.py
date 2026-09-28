@@ -75,7 +75,9 @@ def profile_candidates(
         generator.clear_cache()
 
 
-def merge_profile_shards(inputs: list[str | Path], output: str | Path) -> None:
+def merge_profile_shards(
+    inputs: list[str | Path], output: str | Path, candidates_path: str | Path | None = None
+) -> None:
     rows: dict[str, dict[str, Any]] = {}
     for path in inputs:
         for row in iter_jsonl(path):
@@ -83,5 +85,17 @@ def merge_profile_shards(inputs: list[str | Path], output: str | Path) -> None:
             if candidate_id in rows and rows[candidate_id] != row:
                 raise ValueError(f"Conflicting duplicate candidate: {candidate_id}")
             rows[candidate_id] = row
+    if candidates_path is not None:
+        expected = {str(row["candidate_id"]) for row in iter_jsonl(candidates_path)}
+        actual = set(rows)
+        missing = sorted(expected - actual)
+        unexpected = sorted(actual - expected)
+        if missing or unexpected:
+            details = []
+            if missing:
+                details.append(f"missing {len(missing)} candidates (first: {missing[:5]})")
+            if unexpected:
+                details.append(f"unexpected {len(unexpected)} candidates (first: {unexpected[:5]})")
+            raise ValueError("Profile merge does not match seed bank: " + "; ".join(details))
     ordered = sorted(rows.values(), key=lambda row: row["candidate_id"])
     write_jsonl(output, ordered)

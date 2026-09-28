@@ -29,6 +29,26 @@ def test_sc_proxy_gives_invalid_extractions_zero_coverage() -> None:
     assert proxy["c3"]["q"] == 0.0
 
 
+def test_sc_greedy_random_tie_break_is_reproducible_and_label_free() -> None:
+    predictions = {"q": "A"}
+    first_labels = [
+        _profile("c1", 1.0, {"q": True}, predictions),
+        _profile("c2", 0.0, {"q": False}, predictions),
+    ]
+    reversed_labels = [
+        _profile("c1", 0.0, {"q": False}, predictions),
+        _profile("c2", 1.0, {"q": True}, predictions),
+    ]
+
+    first = select_team(first_labels, "sc_greedy", 1, tie_break_seed=7)
+    repeated = select_team(first_labels, "sc_greedy", 1, tie_break_seed=7)
+    relabeled = select_team(reversed_labels, "sc_greedy", 1, tie_break_seed=7)
+
+    assert first["members"][0]["candidate_id"] == repeated["members"][0]["candidate_id"]
+    assert first["members"][0]["candidate_id"] == relabeled["members"][0]["candidate_id"]
+    assert first["tie_break_seed"] == 7
+
+
 def test_top_accuracy_tie_break_is_stable() -> None:
     profiles = [
         _profile("c2", 0.5, {"q": True}),

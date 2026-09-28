@@ -10,7 +10,11 @@ This restoration strategy prioritizes correctness and requires host RAM approxim
 
 ## Coverage selection
 
-AC-Greedy assigns score 1 to a correct candidate-question prediction and 0 otherwise. SC-Greedy clusters by normalized extracted answer and assigns each valid prediction the fraction of valid pool predictions in its cluster. An invalid extraction always receives score 0; it never forms an answer cluster. Both methods greedily maximize the mean question-level maximum score.
+AC-Greedy assigns score 1 to a correct candidate-question prediction and 0 otherwise. SC-Greedy clusters by normalized extracted answer and assigns each valid prediction the fraction of valid pool predictions in its cluster. An invalid extraction always receives score 0; it never forms an answer cluster. Both methods greedily maximize the mean question-level maximum score. AC-Greedy breaks equal objectives by construction accuracy and then candidate ID. SC-Greedy breaks equal objectives with a pseudorandom choice seeded by `--tie-break-seed` (default 42); it does not consult labels, correctness, or construction accuracy.
+
+## Profile sharding
+
+The multi-GPU launcher records every worker process and exits before merging if any worker fails. A successful merge validates that its candidate-ID set exactly equals the input seed bank, preventing partial or stale shards from silently producing an incomplete society pool.
 
 ## Debate and readout
 
