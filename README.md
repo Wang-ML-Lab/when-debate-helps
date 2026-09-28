@@ -12,7 +12,7 @@ Debate can improve on majority voting when agents supply complementary candidate
 
 ![Figure 1: Overlapping sampled agents provide redundant proposal coverage; diverse agents provide complementary coverage, and verification-aware readout can recover a correct minority answer.](assets/figure1.png)
 
-**Figure 1. Overview of the supply-readout view.** Transparent regions denote questions for which individual sampled agents can surface the correct answer; solid regions denote questions recovered by the final readout. Top: overlapping sampled agents provide redundant proposal coverage. Bottom: diverse agents provide complementary coverage, and LVD uses verification-aware evidence to recover a surfaced correct minority answer. [Vector PDF](assets/figure1.pdf) · [Figure source](assets/README.md)
+**Figure 1. Overview of the supply-readout view.** Transparent regions denote questions for which individual sampled agents can surface the correct answer; solid regions denote questions recovered by the final readout. Top: overlapping sampled agents provide redundant proposal coverage. Bottom: diverse agents provide complementary coverage, and LVD uses verification-aware evidence to recover a surfaced correct minority answer.
 
 The code implements the core experiment pipeline:
 
@@ -21,14 +21,6 @@ The code implements the core experiment pipeline:
 3. select a fixed society with Top-Accuracy, AC-Greedy, or label-free SC-Greedy;
 4. run majority vote or multi-round verification-aware debate;
 5. save every response and judge trace, then measure proposal hit, recoverable headroom, recovery, and damage.
-
-## Release Status
-
-This is an independent reference implementation of the paper's core profiling, selection, and debate pipeline. The Qwen paper configuration generates a 500-candidate pool with the camera-ready scale counts (160/174/166), evaluates the R3 readout, and uses SC@20 for the self-consistency baseline.
-
-SC-Greedy resolves equal coverage objectives with a reproducible random choice controlled by `--tie-break-seed`; labels and construction accuracy do not participate in its tie-breaking. The shard launcher stops before merging if any profiling worker fails and validates the merged candidate IDs against the seed bank. See [the release-readiness audit](docs/RELEASE_READINESS.md) for validation details and release scope.
-
-Paper and proceedings links will be added when public. Author names and affiliations above come from the camera-ready TeX.
 
 ## Install
 
@@ -127,28 +119,7 @@ CUDA_VISIBLE_DEVICES=0 wdh evaluate-base \
 
 Base-model agents use the stochastic `generation.base` block, while thicket agents and the tie-break judge use their separate deterministic generation blocks.
 
-The camera-ready output budget is 8192 tokens for AMC12 and MATH500, which is the default in `configs/qwen3_4b_paper.yaml`. GPQA and MMLU-Redux use 4096 tokens. For those datasets, override the relevant generation blocks, for example:
-
-```bash
-wdh profile \
-  --config configs/qwen3_4b_paper.yaml \
-  --set generation.profile.max_new_tokens=4096 \
-  ...
-
-wdh evaluate \
-  --config configs/qwen3_4b_paper.yaml \
-  --set generation.eval.max_new_tokens=4096 \
-  --set generation.judge.max_new_tokens=4096 \
-  ...
-
-wdh evaluate-base \
-  --config configs/qwen3_4b_paper.yaml \
-  --set generation.base.max_new_tokens=4096 \
-  --set generation.judge.max_new_tokens=4096 \
-  ...
-```
-
-The output budget can affect results when a response reaches the generation limit, especially on long mathematical solutions. Matching it is therefore required for a paper-comparable run even though shorter responses are unchanged.
+The camera-ready output budget is 8192 tokens for AMC12 and MATH500 and 4096 tokens for GPQA and MMLU-Redux. The included config defaults to the mathematical-reasoning budget; set the relevant `generation.*.max_new_tokens` values to 4096 for GPQA and MMLU-Redux. Matching this setting matters when a response reaches the generation limit.
 
 `summary.json` contains aggregate and round-level metrics. `traces.jsonl` retains initial responses, every debate response, extracted answers, correctness, votes, and tie-break judge outputs. Metrics can be recomputed without generation:
 
@@ -160,15 +131,11 @@ wdh analyze \
 
 ## Reproducibility controls
 
-- Candidate seeds and scales are generated from the configured global seed and saved to `seed_bank.jsonl` for each run.
-- Profile sharding is deterministic by candidate index.
-- Every profiling worker must succeed, and the merged profile IDs must exactly match the seed bank.
-- Existing candidate IDs are skipped when profiling resumes.
-- Full-weight perturbations restore from a CPU snapshot, not by subtracting low-precision noise.
-- Exact tensor restoration is checked after every candidate by default.
-- Invalid answer extractions contribute zero SC-Greedy coverage.
-- SC-Greedy uses seeded random tie-breaking that is independent of labels and accuracy.
-- Run manifests record the resolved config, Python and PyTorch versions, CUDA version, device, commit, and parameter counts.
+- Candidate seeds and scales come from the configured global seed and are saved with each run.
+- Profiling is deterministically sharded and resumable; merging rejects failed, missing, or unexpected candidates.
+- Perturbed model weights are restored from a CPU snapshot and checked for exact equality after every candidate.
+- SC-Greedy uses reproducible seeded tie-breaking without labels or construction accuracy.
+- Run manifests record the resolved configuration, environment, commit, and parameter counts.
 
 See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for method details and memory tradeoffs.
 

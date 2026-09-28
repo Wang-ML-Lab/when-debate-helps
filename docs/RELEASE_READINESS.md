@@ -8,7 +8,7 @@ Reviewed and updated September 27, 2026 against the authors' NeurIPS 2026 camera
 
 - Apache-2.0 license, contribution instructions, third-party notice, and exclusions for generated data and runs are present.
 - A fresh editable installation, Ruff, the unit and regression tests, and package builds pass on the audited revision.
-- The README contains the NeurIPS 2026 title and acceptance status, all six authors and affiliations from the camera-ready TeX, Figure 1 with provenance, and machine-readable citation metadata.
+- The README contains the NeurIPS 2026 title and acceptance status, all six authors and affiliations from the camera-ready TeX, Figure 1, and machine-readable citation metadata.
 - The reference Qwen configuration creates 500 candidates across noise scales `0.0005`, `0.001`, and `0.002`, with camera-ready counts 160, 174, and 166.
 - The documented workflow uses SC@20 and three debate rounds. Output budgets match the camera-ready setup: 8192 tokens for AMC12/MATH500 and 4096 for GPQA/MMLU-Redux.
 
