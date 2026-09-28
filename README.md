@@ -1,8 +1,20 @@
-# When Debate Helps
+# [NeurIPS 2026] When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning
 
-Independent reference implementation for **When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning**.
+**Accepted at NeurIPS 2026**
 
-The code reproduces the experiment pipeline without depending on the earlier unlicensed RandOpt implementation:
+This repository contains an independent reference implementation for the following work:
+
+- **When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning**<br>
+  Zihao Zhao¹, Tunyu Zhang², Haizhou Shi²˒³, Yusong Zhao¹, Xinxi Zhang², Hao Wang¹<br>
+  ¹ University of Illinois Urbana-Champaign · ² Rutgers University · ³ Salesforce AI Research
+
+Debate can improve on majority voting when agents supply complementary candidate answers and the readout uses verification evidence to recover correct minority proposals. The paper studies these two mechanisms through recoverable headroom, Latent Verification Debate (LVD), and coverage-based selection of neural-thicket agents.
+
+![Figure 1: Overlapping sampled agents provide redundant proposal coverage; diverse agents provide complementary coverage, and verification-aware readout can recover a correct minority answer.](assets/figure1.png)
+
+**Figure 1. Overview of the supply-readout view.** Transparent regions denote questions for which individual sampled agents can surface the correct answer; solid regions denote questions recovered by the final readout. Top: overlapping sampled agents provide redundant proposal coverage. Bottom: diverse agents provide complementary coverage, and LVD uses verification-aware evidence to recover a surfaced correct minority answer. [Vector PDF](assets/figure1.pdf) · [Figure source](assets/README.md)
+
+The code implements the core experiment pipeline:
 
 1. sample deterministic full-weight Gaussian perturbations;
 2. profile each perturbation on a construction split;
@@ -10,7 +22,13 @@ The code reproduces the experiment pipeline without depending on the earlier unl
 4. run majority vote or multi-round verification-aware debate;
 5. save every response and judge trace, then measure proposal hit, recoverable headroom, recovery, and damage.
 
-The author list and canonical citation will be added after the arXiv record is public.
+## Release Status
+
+This is an independent reference implementation. Full reproduction of the camera-ready results remains pending. The current Qwen configuration uses a new 300-candidate pool; the paper used a 500-candidate pool. The example workflow reports final five-round readouts, while the main table uses R3 majority vote and SC@20. Benchmark preparation, exact experiment configurations, and result artifacts still need to be released.
+
+The release audit also identified a correctness issue: SC-Greedy currently breaks coverage ties using labeled construction accuracy. Its current implementation therefore does not satisfy the paper's label-free selection setting. See [the release-readiness audit](docs/RELEASE_READINESS.md) for evidence and the remaining work.
+
+Paper and proceedings links will be added when public. Author names and affiliations above come from the camera-ready TeX.
 
 ## Install
 
@@ -46,7 +64,7 @@ CUDA_VISIBLE_DEVICES=0 wdh profile \
   --output runs/smoke/profiles.jsonl
 ```
 
-## Paper-scale workflow
+## Paper-Scale Workflow (Reference Configuration)
 
 First prepare disjoint construction and test JSONL files, update their paths in `configs/qwen3_4b_paper.yaml`, and create the seed bank:
 
@@ -124,9 +142,22 @@ wdh analyze \
 - Full-weight perturbations restore from a CPU snapshot, not by subtracting low-precision noise.
 - Exact tensor restoration is checked after every candidate by default.
 - Invalid answer extractions contribute zero SC-Greedy coverage.
-- Run manifests record the resolved config, package versions, device, commit, and parameter counts.
+- Run manifests record the resolved config, Python and PyTorch versions, CUDA version, device, commit, and parameter counts.
 
 See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for method details and memory tradeoffs.
+
+## Citation
+
+```bibtex
+@inproceedings{zhao2026whendebatehelps,
+  title     = {When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning},
+  author    = {Zhao, Zihao and Zhang, Tunyu and Shi, Haizhou and Zhao, Yusong and Zhang, Xinxi and Wang, Hao},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}
+```
+
+Proceedings identifiers, pages, and a public paper URL will be added when available.
 
 ## License
 

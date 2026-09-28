@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this implementation, please cite the paper listed in README.md."
+type: software
+title: "When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning"
+authors:
+  - family-names: Zhao
+    given-names: Zihao
+  - family-names: Zhang
+    given-names: Tunyu
+  - family-names: Shi
+    given-names: Haizhou
+  - family-names: Zhao
+    given-names: Yusong
+  - family-names: Zhang
+    given-names: Xinxi
+  - family-names: Wang
+    given-names: Hao
+repository-code: "https://github.com/neo1zh/when-debate-helps"
+license: Apache-2.0
+preferred-citation:
+  type: conference-paper
+  title: "When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning"
+  authors:
+    - family-names: Zhao
+      given-names: Zihao
+    - family-names: Zhang
+      given-names: Tunyu
+    - family-names: Shi
+      given-names: Haizhou
+    - family-names: Zhao
+      given-names: Yusong
+    - family-names: Zhang
+      given-names: Xinxi
+    - family-names: Wang
+      given-names: Hao
+  collection-title: "Advances in Neural Information Processing Systems"
+  year: 2026
