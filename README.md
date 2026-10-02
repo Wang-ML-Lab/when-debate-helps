@@ -139,6 +139,19 @@ wdh analyze \
 
 See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for method details and memory tradeoffs.
 
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@inproceedings{zhao2026whendebatehelps,
+  title     = {When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning},
+  author    = {Zhao, Zihao and Zhang, Tunyu and Shi, Haizhou and Zhao, Yusong and Zhang, Xinxi and Wang, Hao},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}
+```
+
 ## License
 
 Code and documentation are licensed under Apache-2.0. Model weights and datasets are not covered by this license; see [THIRD_PARTY.md](THIRD_PARTY.md).
