@@ -2,11 +2,13 @@
 
 **Accepted at NeurIPS 2026**
 
+[[Paper](https://arxiv.org/pdf/2610.04686)]
+
 This repository contains an independent reference implementation for the following work:
 
 - **When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning**<br>
-  Zihao Zhao¹, Tunyu Zhang², Haizhou Shi²˒³, Yusong Zhao¹, Xinxi Zhang², Hao Wang¹<br>
-  ¹ University of Illinois Urbana-Champaign · ² Rutgers University · ³ Salesforce AI Research
+  Zihao Zhao¹, Tunyu Zhang², Haizhou Shi², Yusong Zhao¹, Xinxi Zhang², Hao Wang¹<br>
+  ¹ University of Illinois Urbana-Champaign · ² Rutgers University
 
 Debate can improve on majority voting when agents supply complementary candidate answers and the readout uses verification evidence to recover correct minority proposals. The paper studies these two mechanisms through recoverable headroom, Latent Verification Debate (LVD), and coverage-based selection of neural-thicket agents.
 
