@@ -1,14 +1,14 @@
 # [NeurIPS 2026] When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning
 
-**Accepted at NeurIPS 2026**
+---
 
-[[Paper](https://arxiv.org/pdf/2610.04686)]
+This repo contains the code for our NeurIPS 2026 paper:
 
-This repository contains an independent reference implementation for the following work:
-
-- **When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning**<br>
-  Zihao Zhao¹, Tunyu Zhang², Haizhou Shi², Yusong Zhao¹, Xinxi Zhang², Hao Wang¹<br>
-  ¹ University of Illinois Urbana-Champaign · ² Rutgers University
+**When Debate Helps: Proposal Supply and Verification-Aware Readout in Multi-Agent Reasoning**<br>
+Zihao Zhao¹, Tunyu Zhang², Haizhou Shi², Yusong Zhao¹, Xinxi Zhang², Hao Wang¹<br>
+¹ University of Illinois Urbana-Champaign · ² Rutgers University<br>
+*Fortieth Annual Conference on Neural Information Processing Systems (NeurIPS), 2026*<br>
+[[Paper](https://arxiv.org/pdf/2610.04686)] [[OpenReview](https://openreview.net/forum?id=B2PDGRTWWu)]
 
 Debate can improve on majority voting when agents supply complementary candidate answers and the readout uses verification evidence to recover correct minority proposals. The paper studies these two mechanisms through recoverable headroom, Latent Verification Debate (LVD), and coverage-based selection of neural-thicket agents.
 
